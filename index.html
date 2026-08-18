@@ -125,7 +125,7 @@
             <div class="contact-section__back">
               <div class="contact-form-shell">
                 <p class="contact-form-shell__kicker">JUNKBRANDING DESIGN STUDIO</p>
-                <h3>LET’S MAKE SOMETHING TOGETHER</h3>
+                <h3>LET’S WORK TOGETHER</h3>
                 <form class="contact-form" data-contact-form novalidate>
                   <div class="contact-form__field">
                     <label for="contact-name">NAME</label>
@@ -142,6 +142,20 @@
                     <p id="contact-name-error" class="contact-form__error" data-error-for="name"></p>
                   </div>
                   <div class="contact-form__field">
+                    <label for="contact-email">EMAIL</label>
+                    <input
+                      id="contact-email"
+                      name="email"
+                      type="email"
+                      inputmode="email"
+                      autocomplete="email"
+                      maxlength="254"
+                      required
+                      aria-describedby="contact-email-error"
+                    />
+                    <p id="contact-email-error" class="contact-form__error" data-error-for="email"></p>
+                  </div>
+                  <div class="contact-form__field contact-form__field--message">
                     <label for="contact-message">MESSAGE</label>
                     <textarea
                       id="contact-message"

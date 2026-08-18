@@ -33,6 +33,7 @@ export class ContactForm {
     this.isSubmitting = false;
     this.fields = {
       name: form.elements.namedItem('name'),
+      email: form.elements.namedItem('email'),
       message: form.elements.namedItem('message'),
     };
 
@@ -89,29 +90,35 @@ export class ContactForm {
 
     const value = field.value.normalize('NFKC').trim();
     if (!value) {
-      return fieldName === 'name'
-        ? 'Please enter your name.'
-        : 'Please enter a message.';
+      if (fieldName === 'name') return 'お名前を入力してください。';
+      if (fieldName === 'email') return 'メールアドレスを入力してください。';
+      return 'メッセージを入力してください。';
     }
     if (fieldName === 'name') {
-      if (value.length < 2) return 'Name must be at least 2 characters.';
-      if (value.length > 60) return 'Name must be 60 characters or fewer.';
+      if (value.length < 2) return 'お名前は2文字以上で入力してください。';
+      if (value.length > 60) return 'お名前は60文字以内で入力してください。';
       if (!/^[\p{L}\p{M}][\p{L}\p{M}\p{N} .,'’\-]{1,59}$/u.test(value)) {
-        return 'Name contains unsupported characters.';
+        return 'お名前に使用できない文字が含まれています。';
       }
     }
+    if (fieldName === 'email') {
+      const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+      if (value.length > 254) return 'メールアドレスは254文字以内で入力してください。';
+      if (!emailPattern.test(value)) return 'メールアドレスの形式が正しくありません。';
+      if (value.split('@')[0].length > 64) return 'メールアドレスのローカル部分が長すぎます。';
+    }
     if (fieldName === 'message') {
-      if (value.length < 20) return 'Message must be at least 20 characters.';
-      if (value.length > 1200) return 'Message must be 1,200 characters or fewer.';
+      if (value.length < 20) return 'メッセージは20文字以上で入力してください。';
+      if (value.length > 1200) return 'メッセージは1,200文字以内で入力してください。';
       if (/[<>\u0000-\u0008\u000B\u000C\u000E-\u001F]/u.test(value)) {
-        return 'Message contains unsafe characters.';
+        return 'メッセージに使用できない文字が含まれています。';
       }
       if (/(javascript\s*:|data\s*:\s*text\/html|<\/?script)/iu.test(value)) {
-        return 'Message contains a blocked pattern.';
+        return 'メッセージに禁止パターンが含まれています。';
       }
       const urlCount = value.match(/(?:https?:\/\/|www\.)/giu)?.length ?? 0;
-      if (urlCount > 1) return 'Only one URL is allowed.';
-      if (/(\S)\1{24,}/u.test(value)) return 'Message contains excessive repeated characters.';
+      if (urlCount > 1) return 'URLは1つまでにしてください。';
+      if (/(\S)\1{24,}/u.test(value)) return '文字が連続しすぎています。';
     }
     return '';
   }
@@ -127,6 +134,17 @@ export class ContactForm {
     if (!error) field.value = field.value.normalize('NFKC').trim();
     if (errorElement instanceof HTMLElement) errorElement.textContent = error;
     return !error;
+  }
+
+  updateSubmitButtonState() {
+    if (!(this.submitButton instanceof HTMLButtonElement)) return;
+
+    const nameValid = this.validateField('name');
+    const emailValid = this.validateField('email');
+    const messageValid = this.validateField('message');
+    const isReady = this.matchSolved && nameValid && emailValid && messageValid;
+
+    this.submitButton.disabled = !isReady || this.isSubmitting;
   }
 
   async submitForm() {
@@ -145,6 +163,7 @@ export class ContactForm {
         },
         body: JSON.stringify({
           name: this.fields.name?.value.trim(),
+          email: this.fields.email?.value.trim(),
           message: this.fields.message?.value.trim(),
         }),
       });
@@ -203,20 +222,22 @@ export class ContactForm {
       return;
     }
     const nameValid = this.validateField('name');
+    const emailValid = this.validateField('email');
     const messageValid = this.validateField('message');
     if (this.status instanceof HTMLElement) {
       if (!this.matchSolved) {
         this.status.textContent = 'PLEASE MATCH THE IMAGE FIRST.';
       } else {
-        this.status.textContent = nameValid && messageValid
+        this.status.textContent = nameValid && emailValid && messageValid
           ? 'SECURITY CHECK PASSED — MESSAGE IS READY.'
           : 'PLEASE CHECK THE FIELDS ABOVE.';
       }
     }
-    if (nameValid && messageValid && this.matchSolved) {
+    if (nameValid && emailValid && messageValid && this.matchSolved) {
       this.submitForm();
     }
     if (!nameValid) this.fields.name?.focus();
+    else if (!emailValid) this.fields.email?.focus();
     else if (!messageValid) this.fields.message?.focus();
     else if (!this.matchSolved) this.matchChoices[0]?.focus();
   }
@@ -263,9 +284,7 @@ export class ContactForm {
         if (this.matchStatus instanceof HTMLElement) {
           this.matchStatus.textContent = '2 OF 2 MATCHED — MESSAGE UNLOCKED.';
         }
-        if (this.submitButton instanceof HTMLButtonElement) {
-          this.submitButton.disabled = false;
-        }
+        this.updateSubmitButtonState();
       }
       return;
     }
@@ -294,13 +313,15 @@ export class ContactForm {
     const field = event.target;
     if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
     if (field.getAttribute('aria-invalid') === 'true') this.validateField(field.name);
+    this.updateSubmitButtonState();
     if (this.status instanceof HTMLElement) this.status.textContent = '';
   }
 
   handleBlur(event) {
     const field = event.target;
     if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
-    if (field.name === 'name' || field.name === 'message') this.validateField(field.name);
+    if (field.name === 'name' || field.name === 'email' || field.name === 'message') this.validateField(field.name);
+    this.updateSubmitButtonState();
   }
 
   dispose() {

@@ -13,13 +13,15 @@ export default async function handler(req, res) {
 
   const body = req.body ?? {};
   const name = String(body.name ?? '').trim();
+  const email = String(body.email ?? '').trim();
   const message = String(body.message ?? '').trim();
 
-  if (!name || !message) {
-    return res.status(400).json({ message: 'Name and message are required.' });
+  if (!name || !email || !message) {
+    return res.status(400).json({ message: 'Name, email, and message are required.' });
   }
 
-  if (name.length < 2 || message.length < 20) {
+  const emailPattern = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+  if (name.length < 2 || email.length > 254 || !emailPattern.test(email) || message.length < 20) {
     return res.status(400).json({ message: 'Please check the form fields and try again.' });
   }
 
@@ -43,11 +45,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: fromEmail,
         to: [toEmail],
-        reply_to: name,
+        reply_to: email,
         subject: `New inquiry from ${name}`,
         html: `
           <h2>New contact message</h2>
           <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
           <p><strong>Message:</strong></p>
           <p>${message.replace(/\n/g, '<br />')}</p>
         `,
