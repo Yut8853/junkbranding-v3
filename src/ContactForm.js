@@ -30,6 +30,7 @@ export class ContactForm {
     this.formStartedAt = performance.now();
     this.lastValidSubmitAt = -Infinity;
     this.unlockTimeout = 0;
+    this.isSubmitting = false;
     this.fields = {
       name: form.elements.namedItem('name'),
       message: form.elements.namedItem('message'),
@@ -128,11 +129,64 @@ export class ContactForm {
     return !error;
   }
 
+  async submitForm() {
+    if (!(this.submitButton instanceof HTMLButtonElement)) return;
+    if (this.isSubmitting) return;
+
+    this.isSubmitting = true;
+    this.submitButton.disabled = true;
+    if (this.status instanceof HTMLElement) this.status.textContent = 'SENDING...';
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: this.fields.name?.value.trim(),
+          message: this.fields.message?.value.trim(),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to send message.');
+      }
+
+      this.form.reset();
+      if (this.status instanceof HTMLElement) {
+        this.status.textContent = 'MESSAGE SENT — THANK YOU.';
+      }
+      this.form.dispatchEvent(new CustomEvent('junkbranding:reveal-earth', {
+        bubbles: true,
+      }));
+      this.lastValidSubmitAt = performance.now();
+      this.matchSolved = false;
+      this.resetMatchChallenge('SECURITY CHECK RESET — PLEASE TRY AGAIN IF NEEDED.');
+      this.submitButton.disabled = true;
+    } catch (error) {
+      if (this.status instanceof HTMLElement) {
+        this.status.textContent = error instanceof Error
+          ? error.message
+          : 'FAILED TO SEND MESSAGE.';
+      }
+      this.submitButton.disabled = false;
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
   handleSubmit(event) {
     event.preventDefault();
     const now = performance.now();
     if (this.honeypot instanceof HTMLInputElement && this.honeypot.value.trim()) {
       if (this.status instanceof HTMLElement) this.status.textContent = 'SECURITY CHECK FAILED.';
+      return;
+    }
+    if (this.isSubmitting) {
+      if (this.status instanceof HTMLElement) this.status.textContent = 'SENDING IN PROGRESS.';
       return;
     }
     if (now - this.formStartedAt < 2500) {
@@ -160,10 +214,7 @@ export class ContactForm {
       }
     }
     if (nameValid && messageValid && this.matchSolved) {
-      this.lastValidSubmitAt = now;
-      this.form.dispatchEvent(new CustomEvent('junkbranding:reveal-earth', {
-        bubbles: true,
-      }));
+      this.submitForm();
     }
     if (!nameValid) this.fields.name?.focus();
     else if (!messageValid) this.fields.message?.focus();
