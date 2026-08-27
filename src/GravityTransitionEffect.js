@@ -192,7 +192,7 @@ export class GravityTransitionEffect {
   }
 
   setProgress(sceneProgress, direction = 1) {
-    this.progress = THREE.MathUtils.smoothstep(sceneProgress, 1.64, 1.84);
+    this.progress = THREE.MathUtils.smoothstep(sceneProgress, 1.98, 2.18);
     const peak = Math.pow(Math.max(0, Math.sin(this.progress * Math.PI)), 0.72);
     this.intensity = this.reduced ? 0 : peak;
     this.direction = direction || 1;

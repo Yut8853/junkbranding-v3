@@ -24,7 +24,12 @@ import { LoadingTransitionOverlay } from './LoadingTransitionOverlay.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SCENE_PROGRESS_MAX = 1.9;
+// The scene timeline gained a dedicated CAPABILITIES rest point between WORKS
+// and MANIFESTO. Everything from MANIFESTO onward was shifted later by exactly
+// LATE_PHASE_SHIFT so each existing animation keeps its original internal
+// timing and only its starting point moves.
+const LATE_PHASE_SHIFT = 0.34;
+const SCENE_PROGRESS_MAX = 1.9 + LATE_PHASE_SHIFT;
 
 export class FlowerParticleExperience {
   constructor({
@@ -61,6 +66,16 @@ export class FlowerParticleExperience {
     this.contactSection = contactSection;
     this.modelUrl = modelUrl;
     this.photoUrl = photoUrl;
+
+    // Scroll-narration layers for DECONSTRUCT / EXCHANGE / THIRD FORM. Each
+    // band fades in over the WebGL phase it describes.
+    this.phaseCopyLayers = [
+      { element: document.querySelector('[data-phase-copy="deconstruct"]'), enter: [0.16, 0.27], exit: [0.42, 0.55] },
+      { element: document.querySelector('[data-phase-copy="exchange"]'), enter: [0.5, 0.6], exit: [0.68, 0.78] },
+      { element: document.querySelector('[data-phase-copy="third-form"]'), enter: [1.44, 1.52], exit: [1.62, 1.7] },
+    ].filter((layer) => layer.element instanceof HTMLElement);
+    this.thirdFormAdapt = document.querySelector('[data-third-form-adapt]');
+    this.thirdFormAdapted = false;
 
     this.renderer = null;
     this.scene = null;
@@ -108,7 +123,16 @@ export class FlowerParticleExperience {
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.handleResize = this.handleResize.bind(this);
     this.handleParticleNavigation = this.handleParticleNavigation.bind(this);
+    this.handleThirdFormPointer = this.handleThirdFormPointer.bind(this);
     this.render = this.render.bind(this);
+    this.canvas.addEventListener('pointermove', this.handleThirdFormPointer, { passive: true });
+    this.canvas.addEventListener('pointerdown', this.handleThirdFormPointer, { passive: true });
+  }
+
+  handleThirdFormPointer() {
+    // Only count interaction that happens while THIRD FORM is on screen.
+    if (this.progress < 1.44 || this.progress > 1.7) return;
+    this.markThirdFormAdapted();
   }
 
   async init() {
@@ -305,7 +329,8 @@ export class FlowerParticleExperience {
     const destinations = {
       about: 0.93,
       works: 1.16,
-      contact: 1.86,
+      capabilities: 1.52,
+      contact: 2.2,
     };
     const section = link.dataset.particleNav;
     const destination = destinations[section];
@@ -392,8 +417,8 @@ export class FlowerParticleExperience {
       const openingOpacity = 1 - smoothstep(0.08, 0.34, this.progress);
       // Reveal the complete placeholder first, then replace each X in a
       // separate, clearly readable sequence as Contact settles into place.
-      const contactVisibility = smoothstep(1.72, 1.77, this.progress);
-      const brandTransformation = smoothstep(1.77, 1.855, this.progress);
+      const contactVisibility = smoothstep(2.06, 2.11, this.progress);
+      const brandTransformation = smoothstep(2.11, 2.195, this.progress);
       const resolvedCharacters = this.progress >= SCENE_PROGRESS_MAX
         ? 12
         : Math.floor(brandTransformation * 12);
@@ -427,6 +452,7 @@ export class FlowerParticleExperience {
         `${THREE.MathUtils.lerp(82, 25, worksTravel)}svh`,
       );
     }
+    this.updatePhaseCopy();
     this.updateCapabilitiesSection();
     this.updateContactSection();
     this.updateGravityTransition();
@@ -578,12 +604,43 @@ export class FlowerParticleExperience {
     this.aboutSolid.style.height = `${bottom - top}px`;
   }
 
+  updatePhaseCopy() {
+    for (const layer of this.phaseCopyLayers) {
+      const appear = smoothstep(layer.enter[0], layer.enter[1], this.progress);
+      const leave = smoothstep(layer.exit[0], layer.exit[1], this.progress);
+      const opacity = appear * (1 - leave);
+      const visible = opacity > 0.001;
+      layer.element.style.setProperty('--phase-opacity', opacity);
+      // Slide the headline up as it resolves, then let it settle.
+      layer.element.style.setProperty(
+        '--phase-shift',
+        `${THREE.MathUtils.lerp(26, 0, appear)}px`,
+      );
+      layer.element.toggleAttribute('data-visible', visible);
+    }
+
+    // "INCLUDING YOU." only means something after the visitor has disturbed
+    // the scene, so it stays hidden until the first pointer interaction.
+    if (this.thirdFormAdapt instanceof HTMLElement) {
+      this.thirdFormAdapt.style.setProperty(
+        '--phase-adapt-opacity',
+        this.thirdFormAdapted ? 1 : 0,
+      );
+    }
+  }
+
+  markThirdFormAdapted() {
+    if (this.thirdFormAdapted) return;
+    this.thirdFormAdapted = true;
+    this.updatePhaseCopy();
+  }
+
   updateContactSection() {
     if (!(this.contactSection instanceof HTMLElement)) return;
 
-    const travel = smoothstep(1.73, 1.86, this.progress);
+    const travel = smoothstep(2.07, 2.2, this.progress);
     const offset = THREE.MathUtils.lerp(115, 0, travel);
-    const visible = this.progress >= 1.81;
+    const visible = this.progress >= 2.15;
 
     this.contactSection.style.setProperty('--contact-offset', `${offset}svh`);
     this.contactSection.toggleAttribute('data-visible', visible);
@@ -602,7 +659,7 @@ export class FlowerParticleExperience {
       || !(this.contactSection instanceof HTMLElement)
     ) return;
 
-    const transition = smoothstep(1.66, 1.82, this.progress);
+    const transition = smoothstep(2.0, 2.16, this.progress);
     const gravity = Math.sin(transition * Math.PI);
     const tension = Math.pow(Math.max(0, gravity), 1.6);
     const handoff = smoothstep(0.24, 0.78, transition);
@@ -647,15 +704,15 @@ export class FlowerParticleExperience {
 
     // Hold the J-side in place while the B-side travels up to meet it. Once
     // every pair is aligned, move the complete composition out together.
-    const entrance = smoothstep(1.365, 1.4, this.progress);
-    const bTravel = smoothstep(1.38, 1.56, this.progress);
-    const exitTravel = smoothstep(1.58, 1.71, this.progress);
-    const marqueeTravel = smoothstep(1.54, 1.7, this.progress);
+    const entrance = smoothstep(1.705, 1.74, this.progress);
+    const bTravel = smoothstep(1.72, 1.9, this.progress);
+    const exitTravel = smoothstep(1.92, 2.05, this.progress);
+    const marqueeTravel = smoothstep(1.88, 2.04, this.progress);
     const offset = THREE.MathUtils.lerp(0, -115, exitTravel);
     const bOffset = THREE.MathUtils.lerp(115, 0, bTravel);
-    const opacity = entrance * (1 - smoothstep(1.69, 1.71, this.progress));
-    const marqueeOpacity = smoothstep(1.54, 1.57, this.progress)
-      * (1 - smoothstep(1.67, 1.71, this.progress));
+    const opacity = entrance * (1 - smoothstep(2.03, 2.05, this.progress));
+    const marqueeOpacity = smoothstep(1.88, 1.91, this.progress)
+      * (1 - smoothstep(2.01, 2.05, this.progress));
     const marqueeOffset = THREE.MathUtils.lerp(28, -48, marqueeTravel);
     const visible = opacity > 0.001;
 
@@ -899,6 +956,8 @@ export class FlowerParticleExperience {
     this.intersectionObserver = null;
     window.removeEventListener('resize', this.handleResize);
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    this.canvas.removeEventListener('pointermove', this.handleThirdFormPointer);
+    this.canvas.removeEventListener('pointerdown', this.handleThirdFormPointer);
     this.aboutCanvasSelection?.dispose();
     this.aboutCanvasSelection = null;
 

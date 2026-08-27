@@ -165,10 +165,10 @@ export class ContactFluidReveal {
     this.progress = progress;
     // Keep rendering the foreground while CONTACT travels into view, but only
     // let the centered view accumulate an interactive fluid mask.
-    this.active = progress >= 1.72;
-    this.interactive = progress >= 1.86;
+    this.active = progress >= 2.06;
+    this.interactive = progress >= 2.2;
     this.compositeMaterial.uniforms.uOpacity.value = this.active ? 1 : 0;
-    const travel = smoothstep(1.73, 1.86, progress);
+    const travel = smoothstep(2.07, 2.2, progress);
     this.compositeMaterial.uniforms.uSectionOffset.value = THREE.MathUtils.lerp(
       -1.15,
       0,

@@ -620,8 +620,11 @@ h2 {
 }
 
 .flower-stage {
+  /* 900svh mapped to the previous 1.9 progress ceiling. The timeline now runs
+     to 2.24 for the CAPABILITIES rest point, so the track grows by the same
+     ratio to keep scroll distance per phase unchanged. */
   position: relative;
-  height: 900svh;
+  height: 1061svh;
 }
 
 .flower-stage__sticky {
@@ -1324,6 +1327,147 @@ h2 {
   line-height: 0.95;
   letter-spacing: -0.035em;
   font-weight: 500;
+}
+
+/* Hero discipline line sits top-right, opposite the brand lockup, so the
+   viewer learns what this studio does without centering the composition. */
+.flower-stage__position {
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55em;
+  text-align: right;
+}
+
+.flower-stage__position span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  color: rgb(255 255 255 / 0.66);
+}
+
+.flower-stage__support {
+  right: 0;
+  bottom: calc(clamp(42px, 6vw, 92px) * 0.95);
+  max-width: 22em;
+  font-size: 11px;
+  line-height: 1.85;
+  letter-spacing: 0.1em;
+  text-align: right;
+  color: rgb(255 255 255 / 0.58);
+  text-shadow: none;
+}
+
+/* Phase narration for DECONSTRUCT / EXCHANGE / THIRD FORM. Each band is
+   driven from the scroll timeline through --phase-opacity, and each one is
+   anchored to a different edge so the eye keeps moving down the page. */
+.phase-copy {
+  --phase-opacity: 0;
+  --phase-shift: 26px;
+  position: absolute;
+  z-index: 12;
+  inset: clamp(24px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(14px, 1.8svh, 26px);
+  opacity: var(--phase-opacity);
+  pointer-events: none;
+  visibility: hidden;
+  will-change: opacity, transform;
+}
+
+.phase-copy[data-visible] {
+  visibility: visible;
+}
+
+.phase-copy[data-phase-copy="deconstruct"] {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.phase-copy[data-phase-copy="exchange"] {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.phase-copy[data-phase-copy="third-form"] {
+  align-items: flex-start;
+  justify-content: flex-end;
+  text-align: left;
+}
+
+.phase-copy__index {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  color: rgb(0 231 242 / 0.72);
+}
+
+.phase-copy__headline {
+  max-width: 18em;
+  margin: 0;
+  font-size: clamp(32px, 5.4vw, 82px);
+  font-weight: 500;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  color: rgb(255 255 255 / 0.92);
+  transform: translate3d(0, var(--phase-shift), 0);
+}
+
+.phase-copy__headline--adapt {
+  --phase-adapt-opacity: 0;
+  color: rgb(255 22 132 / 0.92);
+  opacity: var(--phase-adapt-opacity);
+}
+
+.phase-copy__support {
+  max-width: 26em;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.9;
+  letter-spacing: 0.12em;
+  color: rgb(255 255 255 / 0.56);
+}
+
+.phase-copy__exchange {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4svh, 18px);
+  width: min(88vw, 460px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.phase-copy__exchange li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(255 255 255 / 0.16);
+}
+
+.phase-copy__property {
+  font-size: clamp(13px, 1.5vw, 19px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.9);
+}
+
+.phase-copy__transfer {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: rgb(255 255 255 / 0.5);
+}
+
+.phase-copy__transfer i {
+  font-style: normal;
+  color: rgb(255 22 132 / 0.9);
 }
 
 .fluid-stage-brand-canvas {
