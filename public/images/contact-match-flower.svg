@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160">
+  <defs><filter id="g"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="160" height="160" rx="30" fill="#050516"/>
+  <circle cx="80" cy="80" r="62" fill="#ff1688" opacity=".13"/>
+  <g transform="translate(80 80)" fill="none" stroke="#ff55a8" stroke-width="5" filter="url(#g)">
+    <ellipse rx="20" ry="47" transform="rotate(0) translate(0 -28)"/>
+    <ellipse rx="20" ry="47" transform="rotate(72) translate(0 -28)"/>
+    <ellipse rx="20" ry="47" transform="rotate(144) translate(0 -28)"/>
+    <ellipse rx="20" ry="47" transform="rotate(216) translate(0 -28)"/>
+    <ellipse rx="20" ry="47" transform="rotate(288) translate(0 -28)"/>
+    <circle r="22" fill="#54ffb0" stroke="#d8fff0"/>
+  </g>
+</svg>
