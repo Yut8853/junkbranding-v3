@@ -132,23 +132,23 @@
 
       <section class="panel panel--autumn" data-panel="autumn" aria-labelledby="autumn-title">
         <p class="label" data-depth="0.6"><span class="label__season">秋</span>Works</p>
-        <h2 id="autumn-title" class="lede" data-depth="1" tabindex="-1" data-reveal="chars">これまでの仕事から、6件。</h2>
+        <h2 id="autumn-title" class="lede" data-depth="1" tabindex="-1" data-reveal="chars">これまでの仕事から、<!--works-count-->件。</h2>
       </section>
 
       <section id="works" class="panel panel--works" data-panel="works" aria-labelledby="works-title">
         <h2 id="works-title" class="visually-hidden">Works</h2>
-        <p class="label"><span class="label__season">秋</span>Works<span class="works__count"><span data-work-index>01</span> / <span data-work-total>08</span></span></p>
+        <p class="label"><span class="label__season">秋</span>Works<span class="works__count"><span data-work-index>01</span> / <span data-work-total><!--works-total--></span></span></p>
         <nav class="works__nav" aria-label="作品一覧"><ol class="works__list" data-work-list></ol></nav>
         <div class="works__info" data-work-info>
-          <h3 class="works__name" data-work-name tabindex="-1" data-reveal="chars" lang="en">KURASHI NAVI</h3>
+          <h3 class="works__name" data-work-name tabindex="-1" data-reveal="chars" lang="en">TO PLACE</h3>
           <p class="works__ja" data-work-ja data-reveal="sweep"></p>
           <p class="body works__summary" data-work-summary data-reveal="sweep"></p>
           <ul class="works__highlights" data-work-highlights aria-label="見どころ" data-reveal="rise"></ul>
           <p class="works__facts" data-reveal="sweep"><span data-work-year></span><span data-work-role></span></p>
           <ul class="works__stack" data-work-stack aria-label="使用技術" data-reveal="rise"></ul>
           <p class="works__links" data-reveal="sweep">
-            <a class="works__link" data-work-link href="https://fukushi.junkbranding.com/" target="_blank" rel="noopener noreferrer"><span data-work-host>fukushi.junkbranding.com</span></a>
-            <a class="works__link" data-work-repo href="https://github.com/Yut8853/fukushi-portal" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a class="works__link" data-work-link href="https://to-place.co.jp/" target="_blank" rel="noopener noreferrer"><span data-work-host>to-place.co.jp</span></a>
+            <a class="works__link" data-work-repo hidden target="_blank" rel="noopener noreferrer">GitHub</a>
           </p>
         </div>
         <!--works-index-->
@@ -186,8 +186,11 @@
 
       <section class="panel panel--finale" data-panel="finale" aria-label="JUNKBRANDING">
         <div class="finale__meta" data-reveal="rise">
+          <nav class="owned-sites" aria-labelledby="owned-sites-title">
+            <h2 id="owned-sites-title" class="owned-sites__title">Our Sites <span>運営サイト</span></h2>
+            <!--owned-sites-->
+          </nav>
           <p>© 2026 JUNKBRANDING</p>
-          <p>Music: Out of Flux, “Blue Race”</p>
           <a href="#top" data-go="hero" class="finale__top">Back to top</a>
         </div>
       </section>

@@ -1,33 +1,12 @@
 // Selected works. Each entry carries what the Works scene shows: the stack
 // (the technologies used), a few highlights, scope and year.
 //
-// KURASHI NAVI (くらし支援ナビ) is taken from its public repository README
-// (github.com/Yut8853/fukushi-portal, checked 2026-07-27): verified.
 // HAND and FUNKY: summary and highlights come from the sites themselves
 // (fetched 2026-10-01); FUNKY's Next.js is from its generator tag.
 // For the five client sites, stack / year / role are PROVISIONAL: the sites were
 // not inspectable from here, so the tags are what their footage shows or
 // their hosting reveals. Confirm before launch (see REDESIGN_V19.md).
 export const WORKS = [
-  {
-    name: 'KURASHI NAVI',
-    nameJa: 'くらし支援ナビ',
-    href: 'https://fukushi.junkbranding.com/',
-    repo: 'https://github.com/Yut8853/fukushi-portal',
-    video: null,
-    poster: '/videos/fukushi.jpg',
-    record: '/videos/fukushi.mp4',
-    year: 2026,
-    role: 'Planning, Design, Development, Data',
-    summary: '生活費、家賃、仕事、子育て、介護などで困ったときに、制度名を知らなくても全国1,741自治体の公的な相談窓口にたどり着ける案内サイト。',
-    highlights: [
-      '47都道府県・1,741自治体・7,211窓口を公式一次情報から整備',
-      '「困りごと × 自治体」のページを生成し、構造化データと sitemap で検索に届ける',
-      '3ステップ検索、DV利用者のための「すぐに閉じる」、キーボード・読み上げ対応',
-    ],
-    stack: ['Next.js 16', 'React 19', 'TypeScript', 'Zod', 'Cheerio', 'Supabase', 'Vercel'],
-    verified: true,
-  },
   {
     name: 'TO PLACE',
     href: 'https://to-place.co.jp/',

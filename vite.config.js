@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import { WORKS, displayHost } from './src/ui/works.js';
+import { OWNED_SITES } from './src/ui/sites.js';
 import { CAPABILITIES } from './src/ui/capabilities.js';
 
 // Absolute site URL for canonical, Open Graph, structured data, robots and
@@ -48,7 +49,7 @@ function structuredData() {
         isPartOf: { '@id': `${SITE_URL}/#website` },
         about: { '@id': org },
         primaryImageOfPage: `${SITE_URL}/og.jpg`,
-        hasPart: { '@id': `${SITE_URL}/#works` },
+        hasPart: [{ '@id': `${SITE_URL}/#works` }, { '@id': `${SITE_URL}/#owned-sites` }],
       },
       {
         '@type': 'ItemList',
@@ -67,6 +68,16 @@ function structuredData() {
             creator: { '@id': org },
             ...(work.repo ? { sameAs: work.repo } : {}),
           },
+        })),
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${SITE_URL}/#owned-sites`,
+        name: '運営サイト',
+        itemListElement: OWNED_SITES.map((site, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          item: { '@type': 'WebSite', name: site.name, url: site.href, description: site.summary, publisher: { '@id': org } },
         })),
       },
     ],
@@ -96,6 +107,15 @@ function worksIndex() {
         </div>`;
 }
 
+function ownedSites() {
+  return `<ul class="owned-sites__list">${OWNED_SITES.map((site) => `
+    <li><a href="${escape(site.href)}" target="_blank" rel="noopener noreferrer">
+      <span class="owned-sites__name">${escape(site.name)} <span aria-hidden="true">↗</span></span>
+      <span class="owned-sites__description">${escape(site.summary)}</span>
+      <span class="owned-sites__host">${escape(displayHost(site.href))}</span>
+    </a></li>`).join('')}</ul>`;
+}
+
 // The production security headers (vercel.json), also applied by
 // `vite preview` so they can be checked locally before deploying.
 const securityHeaders = Object.fromEntries(
@@ -119,7 +139,10 @@ export default defineConfig({
         .replaceAll('__SITE_URL__', SITE_URL)
         .replace('<!--ld-json-->', `<script type="application/ld+json">${JSON.stringify(structuredData())}</script>`)
         .replace('<!--services-list-->', servicesList())
-        .replace('<!--works-index-->', worksIndex()),
+        .replace('<!--works-index-->', worksIndex())
+        .replace('<!--works-count-->', String(WORKS.length))
+        .replace('<!--works-total-->', String(WORKS.length).padStart(2, '0'))
+        .replace('<!--owned-sites-->', ownedSites()),
       generateBundle() {
         const today = new Date().toISOString().slice(0, 10);
         this.emitFile({ type: 'asset', fileName: 'robots.txt', source: `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n` });
