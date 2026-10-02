@@ -97,8 +97,6 @@ export const WATER = {
       // soft, glowing lines rather than sharp ones: light, not lightning
       float caustic = (pow(r1, 12.0) * 0.6 + pow(r2, 18.0) * 0.4) * wall * patches;
       col += vec3(0.62, 0.9, 1.0) * caustic * 0.2 * uStrength;
-      // the leading edge catches the light
-      col += vec3(0.6, 0.9, 1.0) * exp(-d * d * 120.0) * 0.18 * uStrength;
       // a cooler, deeper tone while passing through
       col = mix(col, col * vec3(0.84, 0.96, 1.04), 0.3 * uStrength);
       gl_FragColor = vec4(col, 1.0);
