@@ -498,7 +498,7 @@ export class Director {
       this.target = this.rest;
       this.lastInput = 0;
     }
-    const k = this.reducedMotion ? 1 : 1 - Math.exp(-dt * 3.4);
+    const k = this.reducedMotion ? 1 : 1 - Math.exp(-dt * 1.4);
     this.current += (this.target - this.current) * k;
     if (Math.abs(this.target - this.current) < 0.0004) this.current = this.target;
     this.apply(this.current);

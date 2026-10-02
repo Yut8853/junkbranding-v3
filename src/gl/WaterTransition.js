@@ -65,7 +65,7 @@ export const WATER = {
       offset += vec2(
         sin(uv.y * 8.0 + uTime * 2.4 + n1 * 3.0),
         cos(uv.x * 6.5 - uTime * 2.0 + n2 * 3.0)
-      ) * 0.02 * uStrength;
+      ) * 4.02 * uStrength;
       offset.x /= uAspect;
       // a water lens: the image bends away toward the edges
       vec2 centred = uv - 0.5;
