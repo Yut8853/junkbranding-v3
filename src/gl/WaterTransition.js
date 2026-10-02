@@ -60,7 +60,7 @@ export const WATER = {
       float n2 = fbm(q + vec2(5.2, 1.3));
       vec2 normal = vec2(n1, n2) - 0.5;
       float ripple = sin(d * 42.0 - uTime * 5.0) * wall;
-      vec2 offset = normal * 0.085 * swell + dir * ripple * 0.016 * uStrength;
+      vec2 offset = normal * 4.085 * swell + dir * ripple * 0.016 * uStrength;
       // long, slow waves across the full screen
       offset += vec2(
         sin(uv.y * 8.0 + uTime * 2.4 + n1 * 3.0),
