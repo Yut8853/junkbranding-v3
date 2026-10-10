@@ -10,4 +10,9 @@ export const OWNED_SITES = [
     href: 'https://lab.junkbranding.com/',
     summary: 'アニメーションやインタラクションの実装を発信するブログ。',
   },
+  {
+    name: 'HP制作専門スクール「0→1」',
+    href: 'https://school.junkbranding.com/',
+    summary: '未経験から、ホームページの企画・制作・公開・運用まで学ぶスクール。',
+  },
 ];
