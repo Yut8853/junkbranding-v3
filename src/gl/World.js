@@ -490,9 +490,15 @@ export class World {
     this.tmp.ray.setFromCamera(pointer.ndc, this.camera);
     this.tmp.plane.setFromNormalAndCoplanarPoint(this.camera.getWorldDirection(new THREE.Vector3()).negate(), this.tmp.look);
     if (pointer.active && this.tmp.ray.ray.intersectPlane(this.tmp.plane, this.tmp.hit)) {
-      const velocity = this.tmp.hit.clone().sub(pointer.world).divideScalar(dt);
-      if (pointer.world.x > 90) velocity.set(0, 0, 0);
-      pointer.velocity.lerp(velocity.clampLength(0, 12), 1 - Math.exp(-dt * 10));
+      if (dt > 0) {
+        const velocity = this.tmp.hit.clone().sub(pointer.world).divideScalar(dt);
+        if (pointer.world.x > 90) velocity.set(0, 0, 0);
+        pointer.velocity.lerp(velocity.clampLength(0, 12), 1 - Math.exp(-dt * 10));
+      } else {
+        // A paused frame has no elapsed time. Keep tracking position without
+        // dividing by zero or carrying a stale impulse into the resumed swarm.
+        pointer.velocity.set(0, 0, 0);
+      }
       pointer.world.copy(this.tmp.hit);
       pointer.energy = Math.min(1, pointer.energy + pointer.velocity.length() * dt * 0.8);
     }
