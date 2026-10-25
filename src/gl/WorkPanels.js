@@ -27,6 +27,9 @@ const FRAGMENT = /* glsl */ `
   uniform float uActive;
   uniform float uSplit;
   uniform float uBlur;
+  uniform bool uDecodeVideo;
+  uniform float uHighlightReduction;
+  uniform float uEdgeGlow;
   uniform vec2 uSize;
   uniform vec3 uAccent;
   varying vec2 vUv;
@@ -36,13 +39,18 @@ const FRAGMENT = /* glsl */ `
     vec2 q = abs(p) - b + r;
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
   }
+  vec3 sampleMap(vec2 uv) {
+    vec4 texel = texture2D(uMap, uv);
+    // Video textures need shader decoding; sRGB posters use GPU texture decoding.
+    return uDecodeVideo ? sRGBTransferEOTF(texel).rgb : texel.rgb;
+  }
   void main() {
     vec2 px = (vUv - 0.5) * uSize;
     float d = box(px, uSize * 0.5, 10.0);
     float mask = 1.0 - smoothstep(-1.2, 0.8, d);
     if (mask < 0.01) discard;
     vec2 shift = vec2(uSplit * 0.006, 0.0);
-    vec3 color = vec3(texture2D(uMap, vUv + shift).r, texture2D(uMap, vUv).g, texture2D(uMap, vUv - shift).b);
+    vec3 color = vec3(sampleMap(vUv + shift).r, sampleMap(vUv).g, sampleMap(vUv - shift).b);
     // depth of field: works out of focus are soft (a ring of taps)
     if (uBlur > 0.01) {
       vec3 soft = color;
@@ -50,35 +58,41 @@ const FRAGMENT = /* glsl */ `
       for (int i = 0; i < 12; i++) {
         float a = float(i) * 0.5235988;
         vec2 o = vec2(cos(a), sin(a) * (uSize.x / uSize.y)) * r;
-        soft += texture2D(uMap, vUv + o).rgb + texture2D(uMap, vUv + o * 0.5).rgb;
+        soft += sampleMap(vUv + o) + sampleMap(vUv + o * 0.5);
       }
       color = mix(color, soft / 25.0, smoothstep(0.0, 0.35, uBlur));
     }
     float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
     vec3 resting = mix(vec3(luma), color, 0.3) * vec3(0.72, 0.78, 0.86) * 0.5;
-    color = mix(resting, color * 0.94, uActive);
+    // Keep light previews below the bloom threshold without dimming their shadows.
+    float highlights = 1.0 - uHighlightReduction * smoothstep(0.55, 1.0, luma);
+    color = mix(resting, color * 0.94 * highlights, uActive);
     // glass edge: a hairline that catches the season's light
     float edge = 1.0 - smoothstep(0.0, 2.2, abs(d + 1.0));
-    color += uAccent * edge * (0.25 + uActive * 0.45);
+    color += uAccent * edge * (0.25 + uActive * 0.45) * uEdgeGlow;
     float facing = clamp(dot(normalize(vNormalW), normalize(vViewW)), 0.0, 1.0);
     gl_FragColor = vec4(color, mask * uOpacity * mix(mix(0.45, 1.0, facing), 1.0, uActive));
   }
 `;
 
 export class WorkPanels {
-  constructor(scene, layout) {
+  constructor(scene, layout, works = []) {
     this.group = new THREE.Group();
     this.group.name = 'works';
     const geometry = new THREE.PlaneGeometry(PANEL_WIDTH, PANEL_HEIGHT, 24, 1);
     const blank = new THREE.DataTexture(new Uint8Array([10, 14, 20, 255]), 1, 1);
     blank.needsUpdate = true;
-    this.panels = layout.map((slot) => {
+    this.panels = layout.map((slot, index) => {
+      const preview = works[index]?.preview;
       const uniforms = {
         uMap: { value: blank },
         uOpacity: { value: 0 },
         uActive: { value: 0 },
         uSplit: { value: 0 },
         uBlur: { value: 0 },
+        uDecodeVideo: { value: false },
+        uHighlightReduction: { value: preview?.highlightReduction ?? 0 },
+        uEdgeGlow: { value: preview?.edgeGlow ?? 1 },
         uBend: { value: 0 },
         uSize: { value: new THREE.Vector2(960, 424) },
         uAccent: { value: new THREE.Color('#ff8f6b') },
@@ -118,7 +132,10 @@ export class WorkPanels {
       // as the camera departs and lands on the next as it arrives
       u.uBlur.value = Math.min(1, Math.abs(focus - index)) * (0.6 + speed * 0.4);
       u.uBend.value = speed;
-      if (textures[index]) u.uMap.value = textures[index];
+      if (textures[index]) {
+        u.uMap.value = textures[index];
+        u.uDecodeVideo.value = textures[index].isVideoTexture === true;
+      }
       if (accent) u.uAccent.value.copy(accent);
     });
   }

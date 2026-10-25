@@ -6,6 +6,7 @@
 // For the five client sites, stack / year / role are PROVISIONAL: the sites were
 // not inspectable from here, so the tags are what their footage shows or
 // their hosting reveals. Confirm before launch (see REDESIGN_V19.md).
+// Light previews use a gentle highlight reduction and a quieter glass edge.
 export const WORKS = [
   {
     name: 'TO PLACE',
@@ -22,6 +23,7 @@ export const WORKS = [
     name: 'IWAKIKI',
     href: 'https://d2crmzpw5das9r.cloudfront.net/',
     video: '/videos/iwakiki.mp4',
+    preview: { highlightReduction: 0.16, edgeGlow: 0.6 },
     year: 2025,
     role: 'Design, Development',
     summary: '福島県いわき市の不動産会社サイト。「縁結び」を大胆な文字組みで。',
@@ -55,6 +57,7 @@ export const WORKS = [
     name: 'LUZ REAL',
     href: 'https://luz-real.com/',
     video: '/videos/luzreal.mp4',
+    preview: { highlightReduction: 0.16, edgeGlow: 0.6 },
     year: 2024,
     role: 'Design, Development',
     summary: '都心4区の不動産会社サイト。音楽とともに物件の世界観を伝える。',
@@ -86,6 +89,7 @@ export const WORKS = [
     nameJa: 'JUNKBRANDING Funky Version',
     href: 'https://funky.junkbranding.com/',
     video: '/videos/junk.mp4',
+    preview: { highlightReduction: 0.16, edgeGlow: 0.6 },
     year: 2025,
     role: 'Branding, Design, Development',
     summary: '散らばる文字と立体ロゴで「ジャンク」を表現した、もう一つの自社サイト。',

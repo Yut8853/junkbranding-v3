@@ -146,7 +146,7 @@ export class World {
     }
     this.environment = new Environment({ scene: this.scene, tier: this.tier });
     this.jelly.render.uJelly.value = 1;
-    this.workPanels = new WorkPanels(this.scene, workLayout(WORKS.length));
+    this.workPanels = new WorkPanels(this.scene, workLayout(WORKS.length), WORKS);
     this.ocean = new Ocean(this.scene);
     this.bubbles = new Bubbles(this.scene, { count: high ? 260 : 120 });
     this.water = { strength: 0, front: -2, dir: 1 };
