@@ -350,6 +350,9 @@ export class Director {
     window.addEventListener('keydown', (event) => {
       const tag = event.target instanceof HTMLElement ? event.target.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || this.busy) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      // Space activates a focused control; it must not be taken for the dive.
+      if (event.key === ' ' && (tag === 'BUTTON' || tag === 'A')) return;
       if (['ArrowDown', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); this.goTo(this.rest + 1); }
       else if (['ArrowUp', 'PageUp'].includes(event.key)) { event.preventDefault(); this.goTo(this.rest - 1); }
       else if (event.key === 'Home') this.goTo(0);
@@ -678,6 +681,11 @@ export class Director {
   applyHud(position, depth) {
     const nearestIndex = Math.round(position);
     const nearest = STATIONS[nearestIndex];
+    // the "how to dive" hint has done its job once the visitor has moved
+    if (!this.dived && position > 0.15) {
+      this.dived = true;
+      document.body.classList.add('has-dived');
+    }
     if (this.announced !== nearestIndex && this.announcer && Math.abs(position - nearestIndex) < 0.05) {
       this.announced = nearestIndex;
       const names = { hero: 'トップ', about: 'About', services: 'Services', autumn: 'Works', contact: 'Contact', finale: 'フッター' };
