@@ -90,6 +90,9 @@ export class World {
     this.time = 0;
     this.last = performance.now();
     this.pointer = { ndc: new THREE.Vector2(), world: new THREE.Vector3(99, 99, 99), velocity: new THREE.Vector3(), active: false, energy: 0 };
+    // The cross-breed's focus (set by the Director): a point on screen, how far
+    // around it the flower swarm takes on its partner, and how strongly.
+    this.mixFocus = { ndc: new THREE.Vector2(), reach: 1, strength: 0 };
     this.pulsePhase = 0;
     this.running = false;
     this.frame = this.frame.bind(this);
@@ -397,6 +400,22 @@ export class World {
     this.environment.setPixelRatio(ratio);
   }
 
+  // The view ray through the focus, in the swarm's own space: the swarm
+  // measures each particle's distance from it, so depth never matters.
+  updateMixFocus(system, scale) {
+    const { sim } = system;
+    const focus = this.mixFocus;
+    sim.uMixLocal.value = focus.strength;
+    if (focus.strength <= 0) return;
+    this.tmp.ray.setFromCamera(focus.ndc, this.camera);
+    const { origin, direction } = this.tmp.ray.ray;
+    const localOrigin = system.points.worldToLocal(origin.clone());
+    const localAlong = system.points.worldToLocal(origin.clone().add(direction));
+    sim.uMixOrigin.value.copy(localOrigin);
+    sim.uMixDir.value.copy(localAlong.sub(localOrigin).normalize());
+    sim.uMixReach.value = focus.reach / scale;
+  }
+
   setPointer(x, y) {
     this.pointer.ndc.set((x / this.width) * 2 - 1, -(y / this.height) * 2 + 1);
     this.pointer.active = true;
@@ -517,6 +536,7 @@ export class World {
       sim.uPointerRadius.value = 0.55 / scale;
       sim.uPointerStrength.value = this.reducedMotion ? 0 : (1.2 + pointer.energy * 5) / scale;
       sim.uPulse.value = system === this.jelly ? 0 : pulse;
+      if (system === this.flower) this.updateMixFocus(system, scale);
       if (this.paused) {
         // frozen: keep the last simulated state
       } else if (this.lite) {
