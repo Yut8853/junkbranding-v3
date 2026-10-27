@@ -390,7 +390,20 @@ html.no-webgl .finale__meta { position: static; }
 .dive-hint__rail { position: relative; width: 1px; height: 44px; overflow: hidden; background: var(--faint); }
 .dive-hint__rail i { position: absolute; top: 0; left: 0; width: 1px; height: 14px; background: var(--accent); animation: dive-drop 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
 @keyframes dive-drop { from { transform: translateY(-14px); } to { transform: translateY(44px); } }
+.dive-hint__lines { display: flex; flex-direction: column; gap: 10px; }
+.dive-hint__text--mix { color: var(--paper); }
 .dive-hint__text--touch { display: none; }
+html.no-webgl .dive-hint__text--mix { display: none; }
+
+/* Cross-breed: "unexpected." becomes the name of what is being bred. The
+   split letters keep their place (so the line never reflows); the name sits
+   over them in the italic, in the season's accent. */
+.tagline__mix { position: relative; display: inline-block; }
+.tagline__alt { position: absolute; top: 0; left: 0; white-space: nowrap; font-style: italic; color: var(--accent); transform-origin: left top; visibility: hidden; pointer-events: none; }
+.tagline__mix.is-mixed .tagline__alt { visibility: visible; }
+.tagline__mix.is-mixed .ch { visibility: hidden !important; }
+.panel--hero { -webkit-touch-callout: none; }
+body.is-mixing { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 @media (hover: none) and (pointer: coarse) {
   .dive-hint__text--pointer { display: none; }
   .dive-hint__text--touch { display: inline; }

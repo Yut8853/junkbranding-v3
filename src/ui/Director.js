@@ -6,6 +6,7 @@ import { TextReveal } from './TextReveal.js';
 import { CAPABILITIES } from './capabilities.js';
 import { FORM, textTargets } from '../gl/targets.js';
 import { workLayout, cameraForPanel } from '../gl/workLayout.js';
+import { scrambleText } from '../BrandRedaction.js';
 
 gsap.registerPlugin(Observer);
 
@@ -103,6 +104,18 @@ const STATIONS = [
 ];
 
 const SEASON_ORDER = ['spring', 'summer', 'autumn', 'winter'];
+
+// Cross-breed: at the hero, holding down mixes the ring of the year inside
+// the medusa's bell with another of the flower swarm's forms.
+const MIX_PARTNERS = [
+  { form: 'hanabi', name: 'Hanabi' },
+  { form: 'snowFall', name: 'Yuki' },
+  { form: 'mapleFall', name: 'Momiji' },
+  { form: 'sakuraFall', name: 'Sakura' },
+];
+const MIX_PEAK = 0.85;
+const MIX_INTERACTIVE = 'a, button, input, textarea, select, label, summary, [role="button"], [data-observer-ignore]';
+const isMixKey = (event) => event.key === 'm' || event.key === 'M';
 const clamp = THREE.MathUtils.clamp;
 const lerp = THREE.MathUtils.lerp;
 const pad = (value) => String(value).padStart(2, '0');
@@ -148,6 +161,9 @@ export class Director {
     }]));
     this.tmp = { color: new THREE.Color(), accent: new THREE.Color() };
     this.reveal = new TextReveal({ reducedMotion });
+    // state: idle → pending (press held, not yet long enough) → on → release → idle
+    this.mix = { amount: 0, state: 'idle', resume: 'idle', index: -1, form: null, tween: null, timer: 0, pointer: null, key: false };
+    this.mixWord = document.querySelector('[data-mix-word]');
     this.tick = this.tick.bind(this);
   }
 
@@ -333,7 +349,7 @@ export class Director {
       preventDefault: true,
       ignore: '[data-observer-ignore]',
       onChangeY: (self) => {
-        if (this.busy) return;
+        if (this.busy || this.mix.state === 'on') return;
         const now = performance.now();
         // Trackpad momentum keeps firing after a scene has settled: ignore
         // that tail so one gesture never carries on into a second scene.
@@ -351,6 +367,14 @@ export class Director {
       const tag = event.target instanceof HTMLElement ? event.target.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || this.busy) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (isMixKey(event)) {
+        if (!event.repeat && this.canMix()) {
+          this.mix.key = true;
+          this.startMix();
+        }
+        return;
+      }
+      if (this.mix.state === 'on') return;
       // Space activates a focused control; it must not be taken for the dive.
       if (event.key === ' ' && (tag === 'BUTTON' || tag === 'A')) return;
       if (['ArrowDown', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); this.goTo(this.rest + 1); }
@@ -369,6 +393,191 @@ export class Director {
         }
       });
     });
+    this.bindMix();
+  }
+
+  // ------------------------------------------------------------ cross-breed
+
+  bindMix() {
+    const mix = this.mix;
+    window.addEventListener('pointerdown', (event) => {
+      if (!event.isPrimary || event.button !== 0) return;
+      if (event.target instanceof Element && event.target.closest(MIX_INTERACTIVE)) return;
+      if (!this.canMix()) return;
+      const touch = event.pointerType === 'touch';
+      mix.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      mix.resume = mix.state;
+      mix.state = 'pending';
+      window.clearTimeout(mix.timer);
+      // a finger must rest (a swipe is the dive); a mouse only has to linger past a click
+      mix.timer = window.setTimeout(() => { if (mix.state === 'pending') this.startMix(); }, touch ? 350 : 140);
+    });
+    window.addEventListener('pointermove', (event) => {
+      const pointer = mix.pointer;
+      if (!pointer || event.pointerId !== pointer.id) return;
+      const dx = event.clientX - pointer.x;
+      if (mix.state === 'pending' && Math.hypot(dx, event.clientY - pointer.y) > 10) {
+        this.abortPendingMix();
+        return;
+      }
+      // dragging sideways while mixing breeds with the next or previous partner
+      if (mix.state === 'on' && Math.abs(dx) > 90) {
+        pointer.x = event.clientX;
+        pointer.y = event.clientY;
+        this.switchPartner(Math.sign(dx));
+      }
+    });
+    const end = (event) => {
+      if (!mix.pointer || event.pointerId !== mix.pointer.id) return;
+      mix.pointer = null;
+      if (mix.state === 'pending') this.abortPendingMix();
+      else this.releaseMix();
+    };
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    // a long press must not open the context menu
+    window.addEventListener('contextmenu', (event) => { if (mix.state === 'pending' || mix.state === 'on') event.preventDefault(); });
+    window.addEventListener('keyup', (event) => {
+      if (!isMixKey(event) || !mix.key) return;
+      mix.key = false;
+      this.releaseMix();
+    });
+    window.addEventListener('blur', () => {
+      mix.key = false;
+      mix.pointer = null;
+      if (mix.state === 'pending') this.abortPendingMix();
+      else this.releaseMix();
+    });
+  }
+
+  canMix() {
+    const state = this.mix.state;
+    return !this.busy
+      && !this.world.paused
+      && this.rest === 0
+      && this.target === 0
+      && Math.abs(this.current) < 0.02
+      && Boolean(this.mixWord)
+      && (state === 'idle' || state === 'release');
+  }
+
+  setPartner(index) {
+    const count = MIX_PARTNERS.length;
+    this.mix.index = ((index % count) + count) % count;
+    const partner = MIX_PARTNERS[this.mix.index];
+    this.mix.form = this.flower.forms[partner.form];
+    this.showMixName(partner.name);
+  }
+
+  startMix() {
+    const mix = this.mix;
+    window.clearTimeout(mix.timer);
+    mix.tween?.kill();
+    // pressing again while the last breed is still dissolving keeps its partner
+    if (mix.amount < 0.05 || !mix.form) this.setPartner(mix.index + 1);
+    else this.showMixName(MIX_PARTNERS[mix.index].name);
+    mix.state = 'on';
+    document.body.classList.add('is-mixing');
+    if (this.reducedMotion) {
+      mix.amount = 0.5;
+      return;
+    }
+    mix.tween = gsap.to(mix, { amount: MIX_PEAK, duration: 0.3 + 1.4 * (1 - mix.amount / MIX_PEAK), ease: 'power2.out' });
+  }
+
+  switchPartner(direction) {
+    const mix = this.mix;
+    mix.tween?.kill();
+    if (this.reducedMotion) {
+      this.setPartner(mix.index + direction);
+      return;
+    }
+    mix.tween = gsap.timeline()
+      .to(mix, { amount: 0, duration: 0.26, ease: 'power2.in' })
+      .call(() => this.setPartner(mix.index + direction))
+      .to(mix, { amount: MIX_PEAK, duration: 1.1, ease: 'power2.out' });
+  }
+
+  releaseMix() {
+    const mix = this.mix;
+    if (mix.state !== 'on') return;
+    mix.state = 'release';
+    document.body.classList.remove('is-mixing');
+    mix.tween?.kill();
+    const done = () => { if (mix.state === 'release') mix.state = 'idle'; };
+    if (this.reducedMotion) {
+      mix.tween = gsap.delayedCall(1.2, () => {
+        mix.amount = 0;
+        this.hideMixName();
+        done();
+      });
+      return;
+    }
+    // the breed holds for a breath, then slowly comes apart
+    mix.tween = gsap.timeline({ onComplete: done })
+      .to(mix, { amount: 0, duration: 2.2, ease: 'power2.inOut' }, 0.4)
+      .call(() => this.hideMixName(), null, 1.1);
+  }
+
+  abortPendingMix() {
+    const mix = this.mix;
+    window.clearTimeout(mix.timer);
+    if (mix.state === 'pending') mix.state = mix.resume === 'release' && mix.tween?.isActive() ? 'release' : 'idle';
+  }
+
+  // The dive (or Motion off) always wins: the breed comes apart at once.
+  cancelMix() {
+    const mix = this.mix;
+    window.clearTimeout(mix.timer);
+    mix.pointer = null;
+    mix.key = false;
+    if (mix.state === 'collapse' || (mix.state === 'idle' && mix.amount === 0)) return;
+    mix.state = 'collapse';
+    document.body.classList.remove('is-mixing');
+    mix.tween?.kill();
+    this.hideMixName();
+    mix.tween = gsap.to(mix, {
+      amount: 0,
+      duration: this.reducedMotion ? 0 : 0.35,
+      ease: 'power2.out',
+      onComplete: () => { if (mix.state === 'collapse') mix.state = 'idle'; },
+    });
+  }
+
+  mixAlt() {
+    if (!this.mixAltElement) {
+      this.mixAltElement = document.createElement('span');
+      this.mixAltElement.className = 'tagline__alt';
+      this.mixAltElement.setAttribute('aria-hidden', 'true');
+      this.mixWord.append(this.mixAltElement);
+    }
+    return this.mixAltElement;
+  }
+
+  // "unexpected." becomes the name of what was just bred.
+  showMixName(name) {
+    if (!this.mixWord) return;
+    const text = `Medusa × ${name}.`;
+    const alt = this.mixAlt();
+    this.mixWord.classList.add('is-mixed');
+    alt.style.transform = '';
+    alt.textContent = text;
+    const rect = alt.getBoundingClientRect();
+    const room = window.innerWidth - 16 - rect.left;
+    if (rect.width > room) alt.style.transform = `scale(${(room / rect.width).toFixed(3)})`;
+    this.stopScramble?.();
+    this.stopScramble = scrambleText(alt, text, { reducedMotion: this.reducedMotion });
+    if (this.announcer) this.announcer.textContent = `Medusa × ${name}`;
+  }
+
+  hideMixName() {
+    if (!this.mixWord?.classList.contains('is-mixed')) return;
+    this.stopScramble?.();
+    this.stopScramble = scrambleText(this.mixAlt(), 'unexpected.', {
+      duration: 0.5,
+      reducedMotion: this.reducedMotion,
+      onDone: () => this.mixWord.classList.remove('is-mixed'),
+    });
   }
 
   // cut: for shortcuts (works index, navigation). A jump of more than one
@@ -378,6 +587,7 @@ export class Director {
     if (index < 0) return;
     const target = clamp(Math.round(index), 0, this.count - 1);
     const distance = target - this.current;
+    if (target !== 0) this.cancelMix();
     if (cut && Math.abs(distance) > 1.5 && !this.reducedMotion) {
       if (!this.veil) {
         this.veil = document.createElement('div');
@@ -501,6 +711,7 @@ export class Director {
       this.target = this.rest;
       this.lastInput = 0;
     }
+    if (this.target !== 0 && this.mix.state !== 'idle' && this.mix.state !== 'collapse') this.cancelMix();
     const k = this.reducedMotion ? 1 : 1 - Math.exp(-dt * 1.4);
     this.current += (this.target - this.current) * k;
     if (Math.abs(this.target - this.current) < 0.0004) this.current = this.target;
@@ -556,8 +767,10 @@ export class Director {
     this.place(this.jelly.points, a.jellyAt, b.jellyAt, e);
     const morph = this.intro.morph;
     const flowerA = this.flower.forms[a.flower];
-    const flowerB = this.flower.forms[b.flower];
-    this.flower.setPair(flowerA, flowerB, e);
+    // at rest on the hero, a cross-breed takes the place of the next scene's form
+    const mixing = i === 0 && e < 0.0001 && this.mix.amount > 0.0005 && this.mix.form;
+    const flowerB = mixing ? this.mix.form : this.flower.forms[b.flower];
+    this.flower.setPair(flowerA, flowerB, mixing ? this.mix.amount : e);
     this.jelly.setPair(this.jelly.forms[a.jelly], this.jelly.forms[b.jelly], e);
     world.jellyDeform = 1;
     world.jellyIgnite = this.intro.ignite;
@@ -608,7 +821,7 @@ export class Director {
     drift.uOpacity.value = lerp(sa.drift.opacity, sb.drift.opacity, e) * this.intro.reveal;
     drift.uColorA.value.copy(ca.a).lerp(cb.a, e);
     drift.uColorB.value.copy(ca.b).lerp(cb.b, e);
-    world.fx.bloom = lerp(sa.bloom, sb.bloom, e);
+    world.fx.bloom = lerp(sa.bloom, sb.bloom, e) + this.mix.amount * 0.08;
     world.fx.threshold = lerp(sa.threshold, sb.threshold, e);
     world.fx.travel = position * 6;
     this.tmp.accent.copy(ca.accent).lerp(cb.accent, e);

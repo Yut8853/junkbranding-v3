@@ -122,6 +122,35 @@ export class BrandRedaction {
   }
 }
 
+// Scrambles any element's text into `to`, locking letters in left to right
+// with the same glyphs and rhythm as the redacted name. Returns a cancel.
+export function scrambleText(element, to, { duration = 0.6, reducedMotion = false, onDone } = {}) {
+  if (reducedMotion) {
+    element.textContent = to;
+    onDone?.();
+    return () => {};
+  }
+  const chars = Array.from(to);
+  const start = performance.now();
+  let last = 0;
+  let frame = 0;
+  const step = (now) => {
+    const progress = Math.min(1, (now - start) / (duration * 1000));
+    if (now - last >= TICK_MS || progress === 1) {
+      last = now;
+      element.textContent = chars.map((char, index) => {
+        const lock = (index / chars.length) * (1 - CHAR_WINDOW) + CHAR_WINDOW;
+        if (char === ' ' || progress >= lock) return char;
+        return randomGlyph(char, Math.max(0, (progress - lock + CHAR_WINDOW) / CHAR_WINDOW));
+      }).join('');
+    }
+    if (progress < 1) frame = requestAnimationFrame(step);
+    else onDone?.();
+  };
+  frame = requestAnimationFrame(step);
+  return () => cancelAnimationFrame(frame);
+}
+
 function randomGlyph(target, closeness) {
   // As a character nears resolution it lands on its real letter more often,
   // which reads as the name "locking in" rather than random noise stopping.
