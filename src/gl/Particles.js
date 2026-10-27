@@ -160,6 +160,10 @@ const VELOCITY_SHADER = /* glsl */ `
   uniform vec3 uPointerVelocity;
   uniform float uPointerRadius;
   uniform float uPointerStrength;
+  uniform vec3 uMixOrigin;
+  uniform vec3 uMixDir;
+  uniform float uMixReach;
+  uniform float uMixLocal;
   ${NOISE}
   ${MORPH}
   ${ANIMATE}
@@ -169,18 +173,25 @@ const VELOCITY_SHADER = /* glsl */ `
     vec4 position = texture2D(texturePosition, uv);
     vec3 velocity = texture2D(textureVelocity, uv).xyz;
     float seed = position.w;
-    float m = localMorph(uMorph, seed);
-    vec3 target = mix(
-      animateTarget(texture2D(uTargetA, uv), texture2D(uCenterA, uv), uFormA, uTime),
-      animateTarget(texture2D(uTargetB, uv), texture2D(uCenterB, uv), uFormB, uTime),
-      m
-    );
+    vec3 homeA = animateTarget(texture2D(uTargetA, uv), texture2D(uCenterA, uv), uFormA, uTime);
+    vec3 homeB = animateTarget(texture2D(uTargetB, uv), texture2D(uCenterB, uv), uFormB, uTime);
+    // Cross-breed: where the view ray under the cursor (or spreading from a
+    // tap) passes, the form takes on its partner. Measured from each
+    // particle's moving home, not its position, so the region never flickers.
+    float near = 0.0;
+    if (uMixLocal > 0.0) {
+      float off = length(cross(homeA - uMixOrigin, uMixDir));
+      near = uMixLocal * exp(-off * off / max(uMixReach * uMixReach, 1e-4));
+    }
+    float morphIn = clamp(uMorph + near, 0.0, 1.0);
+    float m = localMorph(morphIn, seed);
+    vec3 target = mix(homeA, homeB, m);
     // A falling piece that wraps from the bottom back to the top jumps there
     // instead of streaking across the screen.
     if (uFormA > 5.5 && uFormB > 5.5) {
       if (length(velocity) > 60.0) velocity = vec3(0.0);
       else if (distance(target, position.xyz) > 4.0) {
-        gl_FragColor = vec4((target - position.xyz) / max(uDelta, 0.001), 1.0);
+        gl_FragColor = vec4((target - position.xyz) / max(uDelta, 0.001), morphIn);
         return;
       }
     }
@@ -199,7 +210,9 @@ const VELOCITY_SHADER = /* glsl */ `
 
     velocity += acceleration * uDelta;
     velocity *= pow(uDamping, uDelta * 60.0);
-    gl_FragColor = vec4(velocity, 1.0);
+    // w carries this particle's own progress so the render pass colours it
+    // in step with the shape (a local cross-breed included)
+    gl_FragColor = vec4(velocity, morphIn);
   }
 `;
 
@@ -216,6 +229,7 @@ const RENDER_VERTEX = /* glsl */ `
   uniform float uMorph;
   uniform float uGlowA;
   uniform float uGlowB;
+  uniform float uMixSpark;
   uniform float uPointSize;
   uniform float uPixelRatio;
   uniform float uFocus;
@@ -262,7 +276,7 @@ const RENDER_VERTEX = /* glsl */ `
   void main() {
     vec4 position = texture2D(texturePosition, aRef);
     vec3 velocity = texture2D(textureVelocity, aRef).xyz;
-    float m = localMorph(uMorph, position.w);
+    float m = localMorph(texture2D(textureVelocity, aRef).w, position.w);
     if (uJelly > 0.001) {
       vec3 original = position.xyz;
       float part = texture2D(uTargetA, aRef).w;
@@ -310,6 +324,8 @@ const RENDER_VERTEX = /* glsl */ `
     vec4 a = formColor(uFormA, uColorA);
     vec4 b = formColor(uFormB, uColorB);
     vec3 color = mix(a.rgb * uGlowA, b.rgb * uGlowB, m);
+    // where the two forms cross over, the particle burns with both colours
+    color += (a.rgb * uGlowA + b.rgb * uGlowB) * sin(m * 3.14159265) * uMixSpark * 0.55;
     if (uFormA > 4.5 && uFormA < 5.5) {
       float glow = 0.5 + 0.5 * sin(uTime * (0.7 + aRand * 1.6) + aRand * 60.0);
       color *= mix(1.0, 0.35 + 0.95 * smoothstep(0.35, 1.0, glow), 1.0 - m);
@@ -457,6 +473,10 @@ export class Particles {
       uPointerVelocity: { value: new THREE.Vector3() },
       uPointerRadius: { value: 0.55 },
       uPointerStrength: { value: 0 },
+      uMixOrigin: { value: new THREE.Vector3() },
+      uMixDir: { value: new THREE.Vector3(0, 0, -1) },
+      uMixReach: { value: 1 },
+      uMixLocal: { value: 0 },
     };
     this.velocityVariable.material.uniforms = this.sim;
     this.positionVariable.material.uniforms = { uDelta: this.sim.uDelta };
@@ -518,6 +538,7 @@ export class Particles {
       uPixelRatio: { value: 1 },
       uFocus: { value: 6.2 },
       uAperture: { value: 0.09 },
+      uMixSpark: { value: 0 },
       uOpacity: { value: 1 },
       uMaxPoint: { value: 14 },
       uTargetA: this.sim.uTargetA,

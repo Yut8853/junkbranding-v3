@@ -395,15 +395,12 @@ html.no-webgl .finale__meta { position: static; }
 .dive-hint__text--touch { display: none; }
 html.no-webgl .dive-hint__text--mix { display: none; }
 
-/* Cross-breed: "unexpected." becomes the name of what is being bred. The
-   split letters keep their place (so the line never reflows); the name sits
-   over them in the italic, in the season's accent. */
-.tagline__mix { position: relative; display: inline-block; }
-.tagline__alt { position: absolute; top: 0; left: 0; white-space: nowrap; font-style: italic; color: var(--accent); transform-origin: left top; visibility: hidden; pointer-events: none; }
-.tagline__mix.is-mixed .tagline__alt { visibility: visible; }
-.tagline__mix.is-mixed .ch { visibility: hidden !important; }
+/* Cross-breed: "unexpected." takes on the partner's colour live, as deep as
+   the fusion goes (--mix, 0-1, set every frame). The label names the partner. */
+.tagline__mix { display: inline-block; color: color-mix(in srgb, var(--mix-color, var(--accent)) calc(var(--mix, 0) * 100%), var(--paper)); }
+.label__partner { transition: color 600ms ease; }
+.label__partner.is-mixed { color: var(--mix-color, var(--accent)); }
 .panel--hero { -webkit-touch-callout: none; }
-body.is-mixing { cursor: grabbing; -webkit-user-select: none; user-select: none; }
 @media (hover: none) and (pointer: coarse) {
   .dive-hint__text--pointer { display: none; }
   .dive-hint__text--touch { display: inline; }
