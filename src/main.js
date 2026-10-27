@@ -58,6 +58,7 @@ const motionButton = $('[data-motion]');
 const motionLabel = $('[data-motion-label]');
 function setMotion(on) {
   world.paused = !on;
+  if (!on) director?.cancelMix();
   motionButton?.setAttribute('aria-pressed', on ? 'true' : 'false');
   if (motionLabel) motionLabel.textContent = on ? 'Motion on' : 'Motion off';
 }
