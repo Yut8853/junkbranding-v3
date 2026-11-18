@@ -6,6 +6,8 @@
 
 ## 起動
 
+Node.js 22.12以上の環境で実行してください。
+
 ```bash
 npm install
 npm run dev
@@ -17,6 +19,10 @@ npm run dev
 npm run build
 npm run preview
 ```
+
+CI・デプロイでは `npm ci` で `package-lock.json` に固定した依存関係をインストールします。依存関係を更新した際は `package.json` と `package-lock.json` を一緒にコミットしてください。
+
+デプロイ設定はフレームワークを **Vite**（静的サイト）、インストールコマンドを `npm ci`、ビルドコマンドを `npm run build`、公開ディレクトリを `dist` に設定してください。このプロジェクトは Next.js 構成ではありません。
 
 ## 実写の花へ差し替える
 
